@@ -14,7 +14,8 @@ dir_t dirBuf;     // buffer for directory reads
 
 #include <SoftwareServo.h>
 
-SoftwareServo myservo;  // create servo object to control a servo 
+SoftwareServo myservo1;  // create servo object to control a servo 
+SoftwareServo myservo2;  // create servo object to control a servo
 
 int potpin = 0;  // analog pin used to connect the potentiometer
 int val;    // variable to read the value from the analog pin 
@@ -29,7 +30,8 @@ void play(FatReader &dir);
 
 //////////////////////////////////// SETUP
 void setup() {
-  myservo.attach(2);  // attaches the servo on pin 2 to the servo object 
+  myservo1.attach(6);  // attaches the servo on pin 2 to the servo object 
+  myservo2.attach(7);  // attaches the servo on pin 2 to the servo object 
   Serial.begin(9600);           // set up Serial library at 9600 bps for debugging
   
   putstring_nl("\nWave test!");  // say we woke up!
@@ -79,13 +81,15 @@ void loop() {
   play(root);
   for(pos = 0; pos < 180; pos += 1)  // goes from 0 degrees to 180 degrees 
   {                                  // in steps of 1 degree 
-    myservo.write(pos);              // tell servo to go to position in variable 'pos' 
+    myservo1.write(pos);              // tell servo to go to position in variable 'pos' 
+    myservo2.write(pos);              // tell servo to go to position in variable 'pos' 
     SoftwareServo::refresh(); 
     delay(15);                       // waits 15ms for the servo to reach the position
   } 
   for(pos = 180; pos>=1; pos-=1)     // goes from 180 degrees to 0 degrees 
   {                                
-    myservo.write(pos);              // tell servo to go to position in variable 'pos' 
+    myservo1.write(pos);              // tell servo to go to position in variable 'pos' 
+    myservo2.write(pos);              // tell servo to go to position in variable 'pos'  
     SoftwareServo::refresh();
     delay(15);                       // waits 15ms for the servo to reach the position 
   } 
