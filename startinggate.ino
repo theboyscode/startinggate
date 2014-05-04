@@ -7,6 +7,7 @@
 SdReader card;    // This object holds the information for the card
 FatVolume vol;    // This holds the information for the partition on the card
 FatReader root;   // This holds the information for the volumes root directory
+FatReader file;   // This object represent the WAV file for a pi digit or period
 WaveHC wave;      // This is the only wave (audio) object, since we will only play one at a time
 
 uint8_t dirLevel; // indent level for file/dir names    (for prettyprinting)
@@ -20,6 +21,11 @@ SoftwareServo myservo2;  // create servo object to control a servo
 int potpin = 0;  // analog pin used to connect the potentiometer
 int val;    // variable to read the value from the analog pin 
 int pos = 0;    // variable to store the servo position 
+int grn_led = 8;
+int red_led = 9;
+int sw_pin = 14;
+
+
 /*
  * Define macro to put error messages in flash memory
  */
@@ -32,6 +38,13 @@ void play(FatReader &dir);
 void setup() {
   myservo1.attach(6);  // attaches the servo on pin 2 to the servo object 
   myservo2.attach(7);  // attaches the servo on pin 2 to the servo object 
+  
+    // initialize the digital pin as an output.
+  pinMode(red_led, OUTPUT);     
+  pinMode(grn_led, OUTPUT);     
+
+  pinMode(sw_pin,INPUT_PULLUP);
+  
   Serial.begin(9600);           // set up Serial library at 9600 bps for debugging
   
   putstring_nl("\nWave test!");  // say we woke up!
@@ -77,27 +90,62 @@ void setup() {
 
 //////////////////////////////////// LOOP
 void loop() {
-  root.rewind();
-  play(root);
-  for(pos = 0; pos < 180; pos += 1)  // goes from 0 degrees to 180 degrees 
+  digitalWrite(grn_led, LOW);   // turn the LED on (HIGH is the voltage level)
+  digitalWrite(red_led, HIGH);   // turn the LED on (HIGH is the voltage level)
+  myservo1.write(0);
+  myservo2.write(0);
+  SoftwareServo::refresh();
+  delay(500);
+  
+  while (digitalRead(sw_pin)) {
+    delay(1);
+  }
+  
+  
+  playfile("gsrg.wav");
+  blink_delay(4000);
+  digitalWrite(grn_led, HIGH);   // turn the LED on (HIGH is the voltage level)
+  digitalWrite(red_led, LOW);   // turn the LED on (HIGH is the voltage level)
+  
+  for(pos = 0; pos < 90; pos += 1)  // goes from 0 degrees to 180 degrees 
   {                                  // in steps of 1 degree 
     myservo1.write(pos);              // tell servo to go to position in variable 'pos' 
     myservo2.write(pos);              // tell servo to go to position in variable 'pos' 
     SoftwareServo::refresh(); 
-    delay(15);                       // waits 15ms for the servo to reach the position
+    delay(2);                       // waits 15ms for the servo to reach the position
   } 
-  for(pos = 180; pos>=1; pos-=1)     // goes from 180 degrees to 0 degrees 
+  
+  while (!digitalRead(sw_pin)) {
+    delay(1);
+  }
+  
+  digitalWrite(grn_led, LOW);   // turn the LED on (HIGH is the voltage level)
+  digitalWrite(red_led, HIGH);   // turn the LED on (HIGH is the voltage level)
+  
+  for(pos = 90; pos>=1; pos-=1)     // goes from 180 degrees to 0 degrees 
   {                                
     myservo1.write(pos);              // tell servo to go to position in variable 'pos' 
     myservo2.write(pos);              // tell servo to go to position in variable 'pos'  
     SoftwareServo::refresh();
-    delay(15);                       // waits 15ms for the servo to reach the position 
+    delay(25);                       // waits 15ms for the servo to reach the position 
   } 
 
 
 }
 
 /////////////////////////////////// HELPERS
+void blink_delay(int delay_ms) {
+  int count = 0;
+  int period = 100;
+  while (count < delay_ms) {
+    digitalWrite(red_led, LOW);   // turn the LED on (HIGH is the voltage level);
+    delay(period/2);
+    digitalWrite(red_led, HIGH);   // turn the LED on (HIGH is the voltage level);
+    delay(period/2);
+    count = count + period;
+  }
+}
+
 /*
  * print error message and halt
  */
@@ -170,4 +218,34 @@ void play(FatReader &dir) {
       }
     }
   }
+}
+
+/*
+ * Play a file and wait for it to complete
+ */
+void playcomplete(char *name) {
+  playfile(name);
+  while (wave.isplaying);
+  
+  // see if an error occurred while playing
+  sdErrorCheck();
+}
+/*
+ * Open and start playing a WAV file
+ */
+void playfile(char *name) {
+  if (wave.isplaying) {// already playing something, so stop it!
+    wave.stop(); // stop it
+  }
+  if (!file.open(root, name)) {
+    PgmPrint("Couldn't open file ");
+    Serial.print(name); 
+    return;
+  }
+  if (!wave.create(file)) {
+    PgmPrintln("Not a valid WAV");
+    return;
+  }
+  // ok time to play!
+  wave.play();
 }
